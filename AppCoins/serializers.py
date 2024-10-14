@@ -14,13 +14,14 @@ class ExchangeRateSerializer(serializers.ModelSerializer):
 
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
-        models = Profile
+        model = Profile
         fields = ['user', 'account_type']
 
 class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction
-        fields = ['user', 'base_currency', 'target_currency', 'amount', 'converted_amount', 'transaction_date']
+        fields = ['user', 'amount', 'base_currency', 'target_currency', 'converted_amount', 'created_at', 'updated_at']
+        read_only_fields = ['user', 'converted_amount', 'created_at', 'updated_at']
 
 class AlertSerializer(serializers.ModelSerializer):
     class Meta:

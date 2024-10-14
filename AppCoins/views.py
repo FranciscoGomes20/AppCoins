@@ -7,6 +7,9 @@ from django.contrib.auth.models import User
 from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from .services import FixerService
+from rest_framework import status
+from decimal import Decimal
 
 # Create your views here.
 class LogoutView(APIView):
@@ -64,6 +67,44 @@ class TransactionListCreateView(ListCreateAPIView):
     queryset = Transaction.objects.all()
     serializer_class = TransactionSerializer
     permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = TransactionSerializer(data=request.data)
+        if serializer.is_valid():
+            base_currency = serializer.validated_data['base_currency']
+            target_currency = serializer.validated_data['target_currency']
+            amount = serializer.validated_data['amount']
+
+            try:
+                exchange_rate = FixerService.get_exchange_rates(
+                    base_currency=base_currency.currency_code,
+                    symbols=[target_currency.currency_code]
+                )[target_currency.currency_code]
+
+                if exchange_rate is None:
+                    return Response({'error': 'Taxa de câmbio não encontrada.'}, status=status.HTTP_400_BAD_REQUEST)
+                
+                if not isinstance(exchange_rate, (int, float)) or exchange_rate <= 0:
+                    return Response({'error': 'Taxa de câmbio inválida.'}, status=status.HTTP_400_BAD_REQUEST)
+
+                exchange_rate = Decimal(str(exchange_rate))
+
+                # Calcula o valor convertido
+                converted_amount = amount * exchange_rate
+                
+                # Cria a transação
+                transaction = Transaction.objects.create(
+                    user=request.user,
+                    amount=amount,
+                    base_currency=base_currency,
+                    target_currency=target_currency,
+                    converted_amount=converted_amount
+                )
+                
+                return Response(TransactionSerializer(transaction).data, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                return Response({'error!': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class TransactionDetailView(RetrieveUpdateDestroyAPIView):
     queryset = Transaction.objects.all()

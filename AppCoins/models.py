@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-class AuditModel(models.Model): # Quem criou e quem modificou o registro, todos os outros modelos herdam ele.
+class AuditModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(User, related_name="%(class)s_created_by", on_delete=models.SET_NULL, null=True)
@@ -16,7 +16,7 @@ class Currency(AuditModel): # Moedas ex: USD/EUR - US Dollar/Euro - $, €
     symbol = models.CharField(max_length=5) 
 
     def __str__(self):
-        return f"{self.currency_code} - {self.currency_name}"
+        return self.currency_code
 
 class ExchangeRate(AuditModel): # Taxas de Câmbio 
     base_currency = models.ForeignKey(Currency, related_name='base_currency_rates', on_delete=models.CASCADE)
